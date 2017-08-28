@@ -41,6 +41,22 @@
 #include <fcl/collision_node.h>
 #include <boost/bind.hpp>
 
+
+template<typename T>
+void do_release(typename std::shared_ptr<T> const&, T*)
+{
+}
+
+template<typename T>
+typename boost::shared_ptr<T> to_boost(typename std::shared_ptr<T> const& p)
+{
+    return
+        boost::shared_ptr<T>(
+                p.get(),
+                boost::bind(&do_release<T>, p, _1));
+
+}
+
 collision_detection::CollisionWorldFCL::CollisionWorldFCL() : CollisionWorld()
 {
   fcl::DynamicAABBTreeCollisionManager* m = new fcl::DynamicAABBTreeCollisionManager();
@@ -167,7 +183,7 @@ void collision_detection::CollisionWorldFCL::constructFCLObject(const World::Obj
     FCLGeometryConstPtr g = createCollisionGeometry(obj->shapes_[i], obj);
     if (g)
     {
-      fcl::CollisionObject* co = new fcl::CollisionObject(g->collision_geometry_, transform2fcl(obj->shape_poses_[i]));
+      fcl::CollisionObject* co = new fcl::CollisionObject(to_boost(g->collision_geometry_), transform2fcl(obj->shape_poses_[i]));
       fcl_obj.collision_objects_.push_back(FCLCollisionObjectPtr(co));
       fcl_obj.collision_geometry_.push_back(g);
     }

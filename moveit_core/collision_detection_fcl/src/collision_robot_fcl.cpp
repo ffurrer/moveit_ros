@@ -36,6 +36,21 @@
 
 #include <moveit/collision_detection_fcl/collision_robot_fcl.h>
 
+template<typename T>
+void do_release(typename std::shared_ptr<T> const&, T*)
+{
+}
+
+template<typename T>
+typename boost::shared_ptr<T> to_boost(typename std::shared_ptr<T> const& p)
+{
+    return
+        boost::shared_ptr<T>(
+                p.get(),
+                boost::bind(&do_release<T>, p, _1));
+
+}
+
 collision_detection::CollisionRobotFCL::CollisionRobotFCL(const robot_model::RobotModelConstPtr& model, double padding,
                                                           double scale)
   : CollisionRobot(model, padding, scale)
@@ -59,7 +74,7 @@ collision_detection::CollisionRobotFCL::CollisionRobotFCL(const robot_model::Rob
         // Every time this object is created, g->computeLocalAABB() is called  which is
         // very expensive and should only be calculated once. To update the AABB, use the
         // collObj->setTransform and then call collObj->computeAABB() to transform the AABB.
-        fcl_objs_[index] = FCLCollisionObjectConstPtr(new fcl::CollisionObject(g->collision_geometry_));
+        fcl_objs_[index] = FCLCollisionObjectConstPtr(new fcl::CollisionObject(to_boost(g->collision_geometry_)));
       }
       else
         logError("Unable to construct collision geometry for link '%s'", links[i]->getName().c_str());
@@ -115,7 +130,7 @@ void collision_detection::CollisionRobotFCL::constructFCLObject(const robot_stat
       {
         transform2fcl(ab_t[k], fcl_tf);
         fcl_obj.collision_objects_.push_back(
-            FCLCollisionObjectPtr(new fcl::CollisionObject(objs[k]->collision_geometry_, fcl_tf)));
+            FCLCollisionObjectPtr(new fcl::CollisionObject(to_boost(objs[k]->collision_geometry_), fcl_tf)));
         // we copy the shared ptr to the CollisionGeometryData, as this is not stored by the class itself,
         // and would be destroyed when objs goes out of scope.
         fcl_obj.collision_geometry_.push_back(objs[k]);
@@ -251,7 +266,7 @@ void collision_detection::CollisionRobotFCL::updatedPaddingOrScaling(const std::
         {
           index = lmodel->getFirstCollisionBodyTransformIndex() + j;
           geoms_[index] = g;
-          fcl_objs_[index] = FCLCollisionObjectConstPtr(new fcl::CollisionObject(g->collision_geometry_));
+          fcl_objs_[index] = FCLCollisionObjectConstPtr(new fcl::CollisionObject(to_boost(g->collision_geometry_)));
         }
       }
     }

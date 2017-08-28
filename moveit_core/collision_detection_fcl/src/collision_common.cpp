@@ -42,6 +42,21 @@
 #include <boost/thread/mutex.hpp>
 #include <memory>
 
+template<typename T>
+void do_release(typename std::shared_ptr<T> const&, T*)
+{
+}
+
+template<typename T>
+typename boost::shared_ptr<T> to_boost(typename std::shared_ptr<T> const& p)
+{
+    return
+        boost::shared_ptr<T>(
+                p.get(),
+                boost::bind(&do_release<T>, p, _1));
+
+}
+
 namespace collision_detection
 {
 bool collisionCallback(fcl::CollisionObject* o1, fcl::CollisionObject* o2, void* data)
@@ -689,7 +704,7 @@ FCLGeometryConstPtr createCollisionGeometry(const shapes::ShapeConstPtr& shape, 
       case shapes::OCTREE:
       {
         const shapes::OcTree* g = static_cast<const shapes::OcTree*>(shape.get());
-        cg_g = new fcl::OcTree(g->octree);
+        cg_g = new fcl::OcTree(to_boost(g->octree));
       }
       break;
       default:
